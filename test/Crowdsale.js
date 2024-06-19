@@ -16,7 +16,7 @@ describe("Crowdsale", () => {
     const Token = await ethers.getContractFactory("Token");
 
     // Deploy token
-    token = await Token.deploy("Dawson Is Cool Token", "DAW", "1000000");
+    token = await Token.deploy("Dawson Is Awesome", "DAW", "1000000");
 
     // Configure accounts
     accounts = await ethers.getSigners();
