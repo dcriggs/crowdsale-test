@@ -3,6 +3,7 @@ import { Container } from "react-bootstrap";
 import { ethers } from "ethers";
 
 import Navigation from "./Navigation";
+import Buy from "./Buy";
 import Info from "./Info";
 import Loading from "./Loading";
 import Progress from "./Progress";
@@ -88,6 +89,12 @@ function App() {
           <p className="text-center">
             <strong>Current Price:</strong> {price} ETH
           </p>
+          <Buy
+            provider={provider}
+            price={price}
+            crowdsale={crowdsale}
+            setIsLoading={setIsLoading}
+          />
           <Progress maxTokens={maxTokens} tokensSold={tokensSold} />
         </>
       )}
