@@ -22,6 +22,7 @@ describe("Crowdsale", () => {
     accounts = await ethers.getSigners();
     deployer = accounts[0];
     user1 = accounts[1];
+    user2 = accounts[2];
 
     // Deploy crowdsale
     crowdsale = await Crowdsale.deploy(token.address, ether(1), "1000000");
@@ -47,6 +48,20 @@ describe("Crowdsale", () => {
     it("returns token address", async () => {
       expect(await crowdsale.token()).to.equal(token.address);
     });
+
+    it("allows the owner to add to the whitelist", async () => {
+      await crowdsale.connect(deployer).addToWhitelist(user1.address);
+      expect(await crowdsale.whitelist(user1.address)).to.be.true;
+    });
+
+    it("allows the owner to remove from the whitelist", async () => {
+      await crowdsale.connect(deployer).removeFromWhitelist(user1.address);
+      expect(await crowdsale.whitelist(user1.address)).to.be.false;
+    });
+
+    it("rejects non-owner from adding to the whitelist", async () => {
+      await expect(crowdsale.connect(user1).addToWhitelist(user2.address)).to.be.reverted;
+    });
   });
 
   describe("Buying tokens", () => {
@@ -55,6 +70,7 @@ describe("Crowdsale", () => {
 
     describe("Success", () => {
       beforeEach(async () => {
+        await crowdsale.connect(deployer).addToWhitelist(user1.address);
         transaction = await crowdsale
           .connect(user1)
           .buyTokens(amount, { value: ether(100) });
@@ -92,6 +108,10 @@ describe("Crowdsale", () => {
           crowdsale.connect(user1).buyTokens(tokens(100), { value: 0 })
         ).to.be.reverted;
       });
+
+      it("rejects non-whitelisted address", async () => {
+        await expect(crowdsale.connect(user2).buyTokens(amount, { value: ether(100) })).to.be.revertedWith("Address not whitelisted");
+      });
     });
   });
 
@@ -101,6 +121,7 @@ describe("Crowdsale", () => {
 
     describe("Success", () => {
       beforeEach(async () => {
+        await crowdsale.connect(deployer).addToWhitelist(user1.address);
         transaction = await user1.sendTransaction({
           to: crowdsale.address,
           value: amount,
@@ -149,6 +170,7 @@ describe("Crowdsale", () => {
 
     describe("Success", () => {
       beforeEach(async () => {
+        await crowdsale.connect(deployer).addToWhitelist(user1.address);
         transaction = await crowdsale
           .connect(user1)
           .buyTokens(amount, { value: value });

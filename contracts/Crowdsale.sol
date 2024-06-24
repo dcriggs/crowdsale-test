@@ -9,6 +9,7 @@ contract Crowdsale {
     uint256 public price;
     uint256 public maxTokens;
     uint256 public tokensSold;
+    mapping(address => bool) public whitelist;
 
     event Buy(uint256 amount, address buyer);
     event Finalize(uint256 tokensSold, uint256 ethRaised);
@@ -34,10 +35,19 @@ contract Crowdsale {
         require(msg.value == (_amount / 1e18) * price);
         require(token.balanceOf(address(this)) >= _amount);
         require(token.transfer(msg.sender, _amount));
+        require(whitelist[msg.sender], "Address not whitelisted");
 
         tokensSold += _amount;
 
         emit Buy(_amount, msg.sender);
+    }
+
+    function addToWhitelist(address _address) public onlyOwner {
+        whitelist[_address] = true;
+    }
+
+    function removeFromWhitelist(address _address) public onlyOwner {
+        whitelist[_address] = false;
     }
 
     function setPrice(uint256 _price) public onlyOwner {
