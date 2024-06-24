@@ -13,6 +13,7 @@ contract Crowdsale {
 
     event Buy(uint256 amount, address buyer);
     event Finalize(uint256 tokensSold, uint256 ethRaised);
+    event WhitelistUpdated(address indexed account, bool isWhitelisted);
 
     constructor(Token _token, uint256 _price, uint256 _maxTokens) {
         owner = msg.sender;
@@ -44,10 +45,12 @@ contract Crowdsale {
 
     function addToWhitelist(address _address) public onlyOwner {
         whitelist[_address] = true;
+        emit WhitelistUpdated(_address, true);
     }
 
     function removeFromWhitelist(address _address) public onlyOwner {
         whitelist[_address] = false;
+        emit WhitelistUpdated(_address, false);
     }
 
     function setPrice(uint256 _price) public onlyOwner {

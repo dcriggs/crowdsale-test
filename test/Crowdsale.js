@@ -50,12 +50,12 @@ describe("Crowdsale", () => {
     });
 
     it("allows the owner to add to the whitelist", async () => {
-      await crowdsale.connect(deployer).addToWhitelist(user1.address);
+      await expect(crowdsale.connect(deployer).addToWhitelist(user1.address)).to.emit(crowdsale, "WhitelistUpdated").withArgs(user1.address, true);
       expect(await crowdsale.whitelist(user1.address)).to.be.true;
     });
 
     it("allows the owner to remove from the whitelist", async () => {
-      await crowdsale.connect(deployer).removeFromWhitelist(user1.address);
+      await expect(crowdsale.connect(deployer).removeFromWhitelist(user1.address)).to.emit(crowdsale, "WhitelistUpdated").withArgs(user1.address, false);
       expect(await crowdsale.whitelist(user1.address)).to.be.false;
     });
 
