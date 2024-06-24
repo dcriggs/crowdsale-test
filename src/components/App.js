@@ -23,6 +23,7 @@ function App() {
   const [price, setPrice] = useState(0);
   const [maxTokens, setMaxTokens] = useState(0);
   const [tokensSold, setTokensSold] = useState(0);
+  const [startTime, setStartTime] = useState(9999999999);
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -67,6 +68,9 @@ function App() {
     );
     setTokensSold(tokensSold);
 
+    const startTime = ethers.utils.formatUnits(await crowdsale.startTime(), 0);
+    setStartTime(startTime);
+
     setIsLoading(false);
   };
 
@@ -94,6 +98,7 @@ function App() {
             price={price}
             crowdsale={crowdsale}
             setIsLoading={setIsLoading}
+            startTime={startTime}
           />
           <Progress maxTokens={maxTokens} tokensSold={tokensSold} />
         </>

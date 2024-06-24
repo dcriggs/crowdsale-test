@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Container } from "react-bootstrap";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Row from "react-bootstrap/Row";
@@ -6,7 +7,7 @@ import Col from "react-bootstrap/Col";
 import Spinner from "react-bootstrap/Spinner";
 import { ethers } from "ethers";
 
-const Buy = ({ provider, price, crowdsale, setIsLoading }) => {
+const Buy = ({ provider, price, crowdsale, setIsLoading, startTime }) => {
   const [amount, setAmount] = useState("0");
   const [isWaiting, setIsWaiting] = useState(false);
 
@@ -38,29 +39,42 @@ const Buy = ({ provider, price, crowdsale, setIsLoading }) => {
   };
 
   return (
-    <Form
-      onSubmit={buyHandler}
-      style={{ maxWidth: "800px", margin: "50px auto" }}
-    >
-      <Form.Group as={Row}>
-        <Col>
-          <Form.Control
-            type="number"
-            placeholder="Enter amount"
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </Col>
-        <Col className="text-center">
-          {isWaiting ? (
-            <Spinner animation="border" />
-          ) : (
-            <Button variant="primary" type="submit" style={{ width: "100%" }}>
-              Buy Tokens
-            </Button>
-          )}
-        </Col>
-      </Form.Group>
-    </Form>
+    <Container>
+      {startTime <= Date.now() ? (
+        <Form
+          onSubmit={buyHandler}
+          style={{ maxWidth: "800px", margin: "50px auto" }}
+        >
+          <Form.Group as={Row}>
+            <Col>
+              <Form.Control
+                type="number"
+                placeholder="Enter amount"
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </Col>
+            <Col className="text-center">
+              {isWaiting ? (
+                <Spinner animation="border" />
+              ) : (
+                <Button
+                  variant="primary"
+                  type="submit"
+                  style={{ width: "100%" }}
+                >
+                  Buy Tokens
+                </Button>
+              )}
+            </Col>
+          </Form.Group>
+        </Form>
+      ) : (
+        <div className="text-center">
+          <h4>Crowdsale has not started yet! Come back later.</h4>
+          <p>Start date: {Date(startTime)}</p>
+        </div>
+      )}
+    </Container>
   );
 };
 

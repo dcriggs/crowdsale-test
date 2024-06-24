@@ -9,17 +9,19 @@ contract Crowdsale {
     uint256 public price;
     uint256 public maxTokens;
     uint256 public tokensSold;
+    uint256 public startTime;
     mapping(address => bool) public whitelist;
 
     event Buy(uint256 amount, address buyer);
     event Finalize(uint256 tokensSold, uint256 ethRaised);
     event WhitelistUpdated(address indexed account, bool isWhitelisted);
 
-    constructor(Token _token, uint256 _price, uint256 _maxTokens) {
+    constructor(Token _token, uint256 _price, uint256 _maxTokens, uint256 _startTime) {
         owner = msg.sender;
         token = _token;
         price = _price;
         maxTokens = _maxTokens;
+        startTime = _startTime;
     }
 
     modifier onlyOwner() {
@@ -27,12 +29,17 @@ contract Crowdsale {
         _;
     }
 
-    receive() external payable {
+    modifier onlyWhenOpen() {
+        require(block.timestamp >= startTime, "Crowdsale has not started yet");
+        _;
+    }
+
+    receive() external payable onlyWhenOpen {
         uint256 amount = msg.value / price;
         buyTokens(amount * 1e18);
     }
 
-    function buyTokens(uint256 _amount) public payable {
+    function buyTokens(uint256 _amount) public payable onlyWhenOpen {
         require(msg.value == (_amount / 1e18) * price);
         require(token.balanceOf(address(this)) >= _amount);
         require(token.transfer(msg.sender, _amount));

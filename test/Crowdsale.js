@@ -8,7 +8,7 @@ const tokens = (n) => {
 const ether = tokens;
 
 describe("Crowdsale", () => {
-  let crowdsale, token, accounts, deployer, user1;
+  let crowdsale, token, accounts, deployer, user1, user2, startTime;
 
   beforeEach(async () => {
     // Load contracts
@@ -24,8 +24,16 @@ describe("Crowdsale", () => {
     user1 = accounts[1];
     user2 = accounts[2];
 
+    // Set start time to 1 minute in the future
+    startTime = Math.floor(Date.now() / 1000) + 60;
+
     // Deploy crowdsale
-    crowdsale = await Crowdsale.deploy(token.address, ether(1), "1000000");
+    crowdsale = await Crowdsale.deploy(
+      token.address,
+      ether(1),
+      "1000000",
+      startTime
+    );
 
     // Send tokens to crowdsale
     let transaction = await token
@@ -49,24 +57,66 @@ describe("Crowdsale", () => {
       expect(await crowdsale.token()).to.equal(token.address);
     });
 
+    it("returns the start time", async () => {
+      expect(await crowdsale.startTime()).to.equal(startTime);
+    });
+
     it("allows the owner to add to the whitelist", async () => {
-      await expect(crowdsale.connect(deployer).addToWhitelist(user1.address)).to.emit(crowdsale, "WhitelistUpdated").withArgs(user1.address, true);
+      await expect(crowdsale.connect(deployer).addToWhitelist(user1.address))
+        .to.emit(crowdsale, "WhitelistUpdated")
+        .withArgs(user1.address, true);
       expect(await crowdsale.whitelist(user1.address)).to.be.true;
     });
 
     it("allows the owner to remove from the whitelist", async () => {
-      await expect(crowdsale.connect(deployer).removeFromWhitelist(user1.address)).to.emit(crowdsale, "WhitelistUpdated").withArgs(user1.address, false);
+      await expect(
+        crowdsale.connect(deployer).removeFromWhitelist(user1.address)
+      )
+        .to.emit(crowdsale, "WhitelistUpdated")
+        .withArgs(user1.address, false);
       expect(await crowdsale.whitelist(user1.address)).to.be.false;
     });
 
     it("rejects non-owner from adding to the whitelist", async () => {
-      await expect(crowdsale.connect(user1).addToWhitelist(user2.address)).to.be.reverted;
+      await expect(crowdsale.connect(user1).addToWhitelist(user2.address)).to.be
+        .reverted;
     });
   });
 
   describe("Buying tokens", () => {
     let transaction, result;
     let amount = tokens(100);
+
+    describe("Failure", () => {
+      it("rejects purchases before start time", async () => {
+        await crowdsale.connect(deployer).addToWhitelist(user1.address);
+        await expect(
+          crowdsale.connect(user1).buyTokens(amount, { value: ether(100) })
+        ).to.be.revertedWith("Crowdsale has not started yet");
+      });
+
+      it("rejects non-whitelisted address", async () => {
+        // Fast forward time to after the start time
+        await ethers.provider.send("evm_increaseTime", [60]);
+        await ethers.provider.send("evm_mine");
+        await expect(
+          crowdsale.connect(user1).buyTokens(amount, { value: ether(100) })
+        ).to.be.revertedWith("Address not whitelisted");
+      });
+
+      it("rejects insufficient ETH", async () => {
+        await crowdsale.connect(deployer).addToWhitelist(user1.address);
+        await expect(
+          crowdsale.connect(user1).buyTokens(tokens(100), { value: 0 })
+        ).to.be.reverted;
+      });
+
+      it("rejects non-whitelisted address", async () => {
+        await expect(
+          crowdsale.connect(user2).buyTokens(amount, { value: ether(100) })
+        ).to.be.revertedWith("Address not whitelisted");
+      });
+    });
 
     describe("Success", () => {
       beforeEach(async () => {
@@ -95,22 +145,9 @@ describe("Crowdsale", () => {
       });
 
       it("emits a Buy event", async () => {
-        //console.log(result);
         await expect(transaction)
           .to.emit(crowdsale, "Buy")
           .withArgs(amount, user1.address);
-      });
-    });
-
-    describe("Failure", () => {
-      it("rejects insufficient ETH", async () => {
-        await expect(
-          crowdsale.connect(user1).buyTokens(tokens(100), { value: 0 })
-        ).to.be.reverted;
-      });
-
-      it("rejects non-whitelisted address", async () => {
-        await expect(crowdsale.connect(user2).buyTokens(amount, { value: ether(100) })).to.be.revertedWith("Address not whitelisted");
       });
     });
   });
