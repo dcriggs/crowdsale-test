@@ -12,6 +12,8 @@ async function main() {
   const MAX_SUPPLY = "1000000";
   const PRICE = ethers.utils.parseUnits("0.01", "ether");
   const START_TIME = Math.floor(Date.now() / 1000) + 60;
+  const MIN_CONTRIBUTION = "10";
+  const MAX_CONTRIBUTION = "10000";
 
   // Deploy Token
   const Token = await hre.ethers.getContractFactory("Token");
@@ -29,7 +31,9 @@ async function main() {
     token.address,
     PRICE,
     ethers.utils.parseUnits(MAX_SUPPLY, "ether"),
-    START_TIME
+    START_TIME,
+    MIN_CONTRIBUTION,
+    MAX_CONTRIBUTION
   );
   await crowdsale.deployed();
 

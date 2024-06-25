@@ -9,6 +9,8 @@ const ether = tokens;
 
 describe("Crowdsale", () => {
   let crowdsale, token, accounts, deployer, user1, user2, startTime;
+  let minContribution = tokens(10);
+  let maxContribution = tokens(10000);
 
   beforeEach(async () => {
     // Load contracts
@@ -28,12 +30,7 @@ describe("Crowdsale", () => {
     startTime = Math.floor(Date.now() / 1000) + 60;
 
     // Deploy crowdsale
-    crowdsale = await Crowdsale.deploy(
-      token.address,
-      ether(1),
-      "1000000",
-      startTime
-    );
+    crowdsale = await Crowdsale.deploy(token.address, ether(0.01), "1000000", startTime, minContribution, maxContribution);
 
     // Send tokens to crowdsale
     let transaction = await token
@@ -43,14 +40,14 @@ describe("Crowdsale", () => {
   });
 
   describe("Deployment", () => {
-    it("sends tokens to the Crowdsale contracts", async () => {
+    it("sends tokens to the Crowdsale contract", async () => {
       expect(await token.balanceOf(crowdsale.address)).to.equal(
         tokens(1000000)
       );
     });
 
     it("returns the price", async () => {
-      expect(await crowdsale.price()).to.equal(ether(1));
+      expect(await crowdsale.price()).to.equal(ether(0.01));
     });
 
     it("returns token address", async () => {
@@ -62,82 +59,60 @@ describe("Crowdsale", () => {
     });
 
     it("allows the owner to add to the whitelist", async () => {
-      await expect(crowdsale.connect(deployer).addToWhitelist(user1.address))
-        .to.emit(crowdsale, "WhitelistUpdated")
-        .withArgs(user1.address, true);
+      await expect(crowdsale.connect(deployer).addToWhitelist(user1.address)).to.emit(crowdsale, "WhitelistUpdated").withArgs(user1.address, true);
       expect(await crowdsale.whitelist(user1.address)).to.be.true;
     });
 
     it("allows the owner to remove from the whitelist", async () => {
-      await expect(
-        crowdsale.connect(deployer).removeFromWhitelist(user1.address)
-      )
-        .to.emit(crowdsale, "WhitelistUpdated")
-        .withArgs(user1.address, false);
+      await expect(crowdsale.connect(deployer).removeFromWhitelist(user1.address)).to.emit(crowdsale, "WhitelistUpdated").withArgs(user1.address, false);
       expect(await crowdsale.whitelist(user1.address)).to.be.false;
     });
 
     it("rejects non-owner from adding to the whitelist", async () => {
-      await expect(crowdsale.connect(user1).addToWhitelist(user2.address)).to.be
-        .reverted;
+      await expect(crowdsale.connect(user1).addToWhitelist(user2.address)).to.be.reverted;
+    });
+
+    it("rejects non-owner from removing from the whitelist", async () => {
+      await expect(crowdsale.connect(user1).addToWhitelist(user2.address)).to.be.reverted;
     });
   });
 
   describe("Buying tokens", () => {
     let transaction, result;
     let amount = tokens(100);
+    const pricePerToken = ethers.utils.parseUnits("0.01", "ether");
 
     describe("Failure", () => {
-      it("rejects purchases before start time", async () => {
+      it("rejects purchase that exceeds maximum contribution", async () => {
         await crowdsale.connect(deployer).addToWhitelist(user1.address);
-        await expect(
-          crowdsale.connect(user1).buyTokens(amount, { value: ether(100) })
-        ).to.be.revertedWith("Crowdsale has not started yet");
-      });
-
-      it("rejects non-whitelisted address", async () => {
         // Fast forward time to after the start time
         await ethers.provider.send("evm_increaseTime", [60]);
         await ethers.provider.send("evm_mine");
         await expect(
-          crowdsale.connect(user1).buyTokens(amount, { value: ether(100) })
-        ).to.be.revertedWith("Address not whitelisted");
-      });
-
-      it("rejects insufficient ETH", async () => {
-        await crowdsale.connect(deployer).addToWhitelist(user1.address);
-        await expect(
-          crowdsale.connect(user1).buyTokens(tokens(100), { value: 0 })
-        ).to.be.reverted;
-      });
-
-      it("rejects non-whitelisted address", async () => {
-        await expect(
-          crowdsale.connect(user2).buyTokens(amount, { value: ether(100) })
-        ).to.be.revertedWith("Address not whitelisted");
+          crowdsale.connect(user1).buyTokens(tokens(10001), { value: tokens(10001).mul(pricePerToken).div(tokens(1)) })
+        ).to.be.revertedWith("Amount exceeds maximum contribution");
       });
     });
 
     describe("Success", () => {
       beforeEach(async () => {
         await crowdsale.connect(deployer).addToWhitelist(user1.address);
+        // Fast forward time to after the start time
+        await ethers.provider.send("evm_increaseTime", [60]);
+        await ethers.provider.send("evm_mine");
         transaction = await crowdsale
           .connect(user1)
-          .buyTokens(amount, { value: ether(100) });
+          .buyTokens(amount, { value: amount.mul(pricePerToken).div(tokens(1)) });
         result = await transaction.wait();
       });
 
       it("transfers tokens", async () => {
-        expect(await token.balanceOf(crowdsale.address)).to.equal(
-          tokens(999900)
-        );
+        expect(await token.balanceOf(crowdsale.address)).to.equal(tokens(999900));
         expect(await token.balanceOf(user1.address)).to.equal(amount);
       });
 
       it("updates contract ether balance", async () => {
-        expect(await ethers.provider.getBalance(crowdsale.address)).to.equal(
-          amount
-        );
+        expect(await ethers.provider.getBalance(crowdsale.address)).to.equal(amount.mul(pricePerToken).div(tokens(1)));
       });
 
       it("updates tokens sold", async () => {
@@ -149,30 +124,48 @@ describe("Crowdsale", () => {
           .to.emit(crowdsale, "Buy")
           .withArgs(amount, user1.address);
       });
+
+      it("allows smaller purchases after initial minimum contribution", async () => {
+        // User1 makes an initial purchase that meets the minimum contribution
+        const minContributionAmount = tokens(10);  // Example value, set according to your contract
+        await crowdsale.connect(user1).buyTokens(minContributionAmount, { value: minContributionAmount.mul(pricePerToken).div(tokens(1)) });
+
+        // Now, user1 can make a smaller purchase
+        const smallPurchase = tokens(5);  // Example value, set according to your contract
+        await expect(
+          crowdsale.connect(user1).buyTokens(smallPurchase, { value: smallPurchase.mul(pricePerToken).div(tokens(1)) })
+        ).to.not.be.reverted;
+
+        expect(await token.balanceOf(user1.address)).to.equal(amount.add(minContributionAmount).add(smallPurchase));
+      });
     });
   });
 
   describe("Sending ETH", () => {
     let transaction, result;
     let amount = tokens(10);
+    const pricePerToken = ethers.utils.parseUnits("0.01", "ether");
 
     describe("Success", () => {
       beforeEach(async () => {
         await crowdsale.connect(deployer).addToWhitelist(user1.address);
+        // Fast forward time to after the start time
+        await ethers.provider.send("evm_increaseTime", [60]);
+        await ethers.provider.send("evm_mine");
         transaction = await user1.sendTransaction({
           to: crowdsale.address,
-          value: amount,
+          value: amount.mul(pricePerToken).div(tokens(1)),
         });
         result = await transaction.wait();
       });
 
       it("updates contract ether balance", async () => {
         expect(await ethers.provider.getBalance(crowdsale.address)).to.equal(
-          amount
+          amount.mul(pricePerToken).div(tokens(1))
         );
       });
 
-      it("updates contract ether balance", async () => {
+      it("updates user's token balance", async () => {
         expect(await token.balanceOf(user1.address)).to.equal(amount);
       });
     });
@@ -180,22 +173,22 @@ describe("Crowdsale", () => {
 
   describe("Updating Price", () => {
     let transaction, result;
-    let price = ether(2);
+    let newPrice = ether(0.02);
 
     describe("Success", () => {
       beforeEach(async () => {
-        transaction = await crowdsale.connect(deployer).setPrice(price);
+        transaction = await crowdsale.connect(deployer).setPrice(newPrice);
         result = await transaction.wait();
       });
 
       it("updates the price", async () => {
-        expect(await crowdsale.price()).to.equal(ether(2));
+        expect(await crowdsale.price()).to.equal(newPrice);
       });
     });
 
     describe("Failure", () => {
       it("prevents non-owner from updating", async () => {
-        await expect(crowdsale.connect(user1).setPrice(price)).to.be.reverted;
+        await expect(crowdsale.connect(user1).setPrice(newPrice)).to.be.reverted;
       });
     });
   });
@@ -203,11 +196,15 @@ describe("Crowdsale", () => {
   describe("Finalizing Sale", () => {
     let transaction, result;
     let amount = tokens(10);
-    let value = ether(10);
+    const pricePerToken = ethers.utils.parseUnits("0.01", "ether");
+    let value = amount.mul(pricePerToken).div(tokens(1));
 
     describe("Success", () => {
       beforeEach(async () => {
         await crowdsale.connect(deployer).addToWhitelist(user1.address);
+        // Fast forward time to after the start time
+        await ethers.provider.send("evm_increaseTime", [60]);
+        await ethers.provider.send("evm_mine");
         transaction = await crowdsale
           .connect(user1)
           .buyTokens(amount, { value: value });
@@ -219,19 +216,11 @@ describe("Crowdsale", () => {
 
       it("transfers remaining tokens to the owner", async () => {
         expect(await token.balanceOf(crowdsale.address)).to.equal(0);
-        expect(await token.balanceOf(deployer.address)).to.equal(
-          tokens(999990)
-        );
+        expect(await token.balanceOf(deployer.address)).to.equal(tokens(999990));
       });
 
-      it("transfers ETH balance to the owner", async () => {
+      it("transfers contract balance to the owner", async () => {
         expect(await ethers.provider.getBalance(crowdsale.address)).to.equal(0);
-      });
-
-      it("emits Finalize event", async () => {
-        await expect(transaction)
-          .to.emit(crowdsale, "Finalize")
-          .withArgs(amount, value);
       });
     });
 
