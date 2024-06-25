@@ -23,7 +23,6 @@ async function main() {
   console.log(`Token deployed to: ${token.address}\n`);
 
   // Set start time to 1 minute in the future
-  
 
   // Deploy Crowdsale
   const Crowdsale = await hre.ethers.getContractFactory("Crowdsale");

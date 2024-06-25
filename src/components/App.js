@@ -7,6 +7,7 @@ import Buy from "./Buy";
 import Info from "./Info";
 import Loading from "./Loading";
 import Progress from "./Progress";
+import Whitelist from "./Whitelist";
 
 import TOKEN_ABI from "../abis/Token.json";
 import CROWDSALE_ABI from "../abis/Crowdsale.json";
@@ -20,6 +21,7 @@ function App() {
   const [account, setAccount] = useState(null);
   const [accountBalance, setAccountBalance] = useState(0);
 
+  const [owner, setOwner] = useState(0);
   const [price, setPrice] = useState(0);
   const [maxTokens, setMaxTokens] = useState(0);
   const [tokensSold, setTokensSold] = useState(0);
@@ -55,6 +57,9 @@ function App() {
       18
     );
     setAccountBalance(accountBalance);
+
+    const owner = await crowdsale.owner();
+    setOwner(owner);
 
     const price = ethers.utils.formatUnits(await crowdsale.price(), 18);
     setPrice(price);
@@ -107,6 +112,14 @@ function App() {
       <hr />
 
       {account && <Info account={account} accountBalance={accountBalance} />}
+
+      {owner === account && (
+        <Whitelist
+          provider={provider}
+          crowdsale={crowdsale}
+          setIsLoading={setIsLoading}
+        />
+      )}
     </Container>
   );
 }
