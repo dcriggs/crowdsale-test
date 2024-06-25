@@ -23,6 +23,17 @@ const Buy = ({ provider, price, crowdsale, setIsLoading, startTime }) => {
     hour12: true, // true for 12-hour time, false for 24-hour time
   };
 
+  function parseRevertReason(errorMessage) {
+    const regex = /reverted with reason string '([^']+)'/;
+    const match = errorMessage.match(regex);
+
+    if (match && match[1]) {
+      return match[1];
+    } else {
+      return errorMessage;
+    }
+  }
+
   const buyHandler = async (e) => {
     e.preventDefault();
     setIsWaiting(true);
@@ -60,7 +71,7 @@ const Buy = ({ provider, price, crowdsale, setIsLoading, startTime }) => {
       window.alert(`Successfully bought ${amount} tokens`);
     } catch (error) {
       await console.error("Error buying tokens", error);
-      window.alert(`User rejected or transaction reverted: \n${error.reason}`);
+      window.alert(`User rejected or transaction reverted: \n${parseRevertReason(error.reason)}`);
     } finally {
       setIsWaiting(false);
       setIsLoading(false);

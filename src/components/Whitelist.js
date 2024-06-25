@@ -10,6 +10,17 @@ const Whitelist = ({ provider, crowdsale, setIsLoading }) => {
   const [address, setAddress] = useState("0");
   const [isWaiting, setIsWaiting] = useState(false);
 
+  function parseRevertReason(errorMessage) {
+    const regex = /reverted with reason string '([^']+)'/;
+    const match = errorMessage.match(regex);
+
+    if (match && match[1]) {
+      return match[1];
+    } else {
+      return errorMessage;
+    }
+  }
+
   const whitelistHandler = async (e) => {
     e.preventDefault();
     setIsWaiting(true);
@@ -30,7 +41,7 @@ const Whitelist = ({ provider, crowdsale, setIsLoading }) => {
       window.alert(`Address ${address} has been whitelisted successfully`);
     } catch (error) {
       console.error("Error whitelisting address", error);
-      window.alert(`User rejected or transaction reverted: \n${error.reason}`);
+      window.alert(`User rejected or transaction reverted: \n${parseRevertReason(error.reason)}`);
     } finally {
       setIsWaiting(false);
       setIsLoading(false);
@@ -63,7 +74,7 @@ const Whitelist = ({ provider, crowdsale, setIsLoading }) => {
       );
     } catch (error) {
       console.error("Error removing address from the whitelist", error);
-      window.alert(`User rejected or transaction reverted: \n${error.reason}`);
+      window.alert(`User rejected or transaction reverted: \n${parseRevertReason(error.reason)}`);
     } finally {
       setIsWaiting(false);
       setIsLoading(false);
