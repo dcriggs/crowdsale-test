@@ -26,6 +26,8 @@ function App() {
   const [maxTokens, setMaxTokens] = useState(0);
   const [tokensSold, setTokensSold] = useState(0);
   const [startTime, setStartTime] = useState(9999999999);
+  const [minContribution, setMinContribution] = useState(0);
+  const [maxContribution, setMaxContribution] = useState(0);
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -64,6 +66,18 @@ function App() {
     const price = ethers.utils.formatUnits(await crowdsale.price(), 18);
     setPrice(price);
 
+    const minContribution = ethers.utils.formatUnits(
+      await crowdsale.minContribution(),
+      18
+    );
+    setMinContribution(minContribution);
+
+    const maxContribution = ethers.utils.formatUnits(
+      await crowdsale.maxContribution(),
+      18
+    );
+    setMaxContribution(maxContribution);
+
     const maxTokens = ethers.utils.formatUnits(await crowdsale.maxTokens(), 18);
     setMaxTokens(maxTokens);
 
@@ -97,6 +111,10 @@ function App() {
         <>
           <p className="text-center">
             <strong>Current Price:</strong> {price} ETH
+            <br />
+            <strong>Minimum Contribution:</strong> {minContribution} Tokens
+            <br />
+            <strong>Maximum Contribution:</strong> {maxContribution} Tokens
           </p>
           <Buy
             provider={provider}
@@ -114,11 +132,14 @@ function App() {
       {account && <Info account={account} accountBalance={accountBalance} />}
 
       {owner === account && (
-        <Whitelist
-          provider={provider}
-          crowdsale={crowdsale}
-          setIsLoading={setIsLoading}
-        />
+        <Container>
+          <h3 className="text-center">Contract Admin Functions (Owner Only)</h3>
+          <Whitelist
+            provider={provider}
+            crowdsale={crowdsale}
+            setIsLoading={setIsLoading}
+          />
+        </Container>
       )}
     </Container>
   );

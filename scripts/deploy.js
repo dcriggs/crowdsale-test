@@ -10,10 +10,10 @@ async function main() {
   const NAME = "Dawson Is Awesome";
   const SYMBOL = "DAW";
   const MAX_SUPPLY = "1000000";
-  const PRICE = ethers.utils.parseUnits("0.01", "ether");
-  const START_TIME = Math.floor(Date.now() / 1000) + 60;
-  const MIN_CONTRIBUTION = "10";
-  const MAX_CONTRIBUTION = "10000";
+  const PRICE = "0.01";
+  const START_TIME = Math.floor(Date.now() / 1000) + 600;
+  const MIN_CONTRIBUTION = "5";
+  const MAX_CONTRIBUTION = "50000";
 
   // Deploy Token
   const Token = await hre.ethers.getContractFactory("Token");
@@ -22,17 +22,15 @@ async function main() {
 
   console.log(`Token deployed to: ${token.address}\n`);
 
-  // Set start time to 1 minute in the future
-
   // Deploy Crowdsale
   const Crowdsale = await hre.ethers.getContractFactory("Crowdsale");
   const crowdsale = await Crowdsale.deploy(
     token.address,
-    PRICE,
-    ethers.utils.parseUnits(MAX_SUPPLY, "ether"),
+    hre.ethers.utils.parseUnits(PRICE, "ether"),
+    hre.ethers.utils.parseUnits(MAX_SUPPLY, "ether"),
     START_TIME,
-    MIN_CONTRIBUTION,
-    MAX_CONTRIBUTION
+    hre.ethers.utils.parseUnits(MIN_CONTRIBUTION, "ether"),
+    hre.ethers.utils.parseUnits(MAX_CONTRIBUTION, "ether")
   );
   await crowdsale.deployed();
 
@@ -40,7 +38,7 @@ async function main() {
 
   const transaction = await token.transfer(
     crowdsale.address,
-    ethers.utils.parseUnits(MAX_SUPPLY, "ether")
+    hre.ethers.utils.parseUnits(MAX_SUPPLY, "ether")
   );
   await transaction.wait();
 

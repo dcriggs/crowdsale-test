@@ -30,7 +30,14 @@ describe("Crowdsale", () => {
     startTime = Math.floor(Date.now() / 1000) + 60;
 
     // Deploy crowdsale
-    crowdsale = await Crowdsale.deploy(token.address, ether(0.01), "1000000", startTime, minContribution, maxContribution);
+    crowdsale = await Crowdsale.deploy(
+      token.address,
+      ether(0.01),
+      "1000000",
+      startTime,
+      minContribution,
+      maxContribution
+    );
 
     // Send tokens to crowdsale
     let transaction = await token
@@ -59,21 +66,29 @@ describe("Crowdsale", () => {
     });
 
     it("allows the owner to add to the whitelist", async () => {
-      await expect(crowdsale.connect(deployer).addToWhitelist(user1.address)).to.emit(crowdsale, "WhitelistUpdated").withArgs(user1.address, true);
+      await expect(crowdsale.connect(deployer).addToWhitelist(user1.address))
+        .to.emit(crowdsale, "WhitelistUpdated")
+        .withArgs(user1.address, true);
       expect(await crowdsale.whitelist(user1.address)).to.be.true;
     });
 
     it("allows the owner to remove from the whitelist", async () => {
-      await expect(crowdsale.connect(deployer).removeFromWhitelist(user1.address)).to.emit(crowdsale, "WhitelistUpdated").withArgs(user1.address, false);
+      await expect(
+        crowdsale.connect(deployer).removeFromWhitelist(user1.address)
+      )
+        .to.emit(crowdsale, "WhitelistUpdated")
+        .withArgs(user1.address, false);
       expect(await crowdsale.whitelist(user1.address)).to.be.false;
     });
 
     it("rejects non-owner from adding to the whitelist", async () => {
-      await expect(crowdsale.connect(user1).addToWhitelist(user2.address)).to.be.reverted;
+      await expect(crowdsale.connect(user1).addToWhitelist(user2.address)).to.be
+        .reverted;
     });
 
     it("rejects non-owner from removing from the whitelist", async () => {
-      await expect(crowdsale.connect(user1).addToWhitelist(user2.address)).to.be.reverted;
+      await expect(crowdsale.connect(user1).addToWhitelist(user2.address)).to.be
+        .reverted;
     });
   });
 
@@ -89,7 +104,11 @@ describe("Crowdsale", () => {
         await ethers.provider.send("evm_increaseTime", [60]);
         await ethers.provider.send("evm_mine");
         await expect(
-          crowdsale.connect(user1).buyTokens(tokens(10001), { value: tokens(10001).mul(pricePerToken).div(tokens(1)) })
+          crowdsale
+            .connect(user1)
+            .buyTokens(tokens(10001), {
+              value: tokens(10001).mul(pricePerToken).div(tokens(1)),
+            })
         ).to.be.revertedWith("Amount exceeds maximum contribution");
       });
     });
@@ -102,17 +121,23 @@ describe("Crowdsale", () => {
         await ethers.provider.send("evm_mine");
         transaction = await crowdsale
           .connect(user1)
-          .buyTokens(amount, { value: amount.mul(pricePerToken).div(tokens(1)) });
+          .buyTokens(amount, {
+            value: amount.mul(pricePerToken).div(tokens(1)),
+          });
         result = await transaction.wait();
       });
 
       it("transfers tokens", async () => {
-        expect(await token.balanceOf(crowdsale.address)).to.equal(tokens(999900));
+        expect(await token.balanceOf(crowdsale.address)).to.equal(
+          tokens(999900)
+        );
         expect(await token.balanceOf(user1.address)).to.equal(amount);
       });
 
       it("updates contract ether balance", async () => {
-        expect(await ethers.provider.getBalance(crowdsale.address)).to.equal(amount.mul(pricePerToken).div(tokens(1)));
+        expect(await ethers.provider.getBalance(crowdsale.address)).to.equal(
+          amount.mul(pricePerToken).div(tokens(1))
+        );
       });
 
       it("updates tokens sold", async () => {
@@ -127,16 +152,26 @@ describe("Crowdsale", () => {
 
       it("allows smaller purchases after initial minimum contribution", async () => {
         // User1 makes an initial purchase that meets the minimum contribution
-        const minContributionAmount = tokens(10);  // Example value, set according to your contract
-        await crowdsale.connect(user1).buyTokens(minContributionAmount, { value: minContributionAmount.mul(pricePerToken).div(tokens(1)) });
+        const minContributionAmount = tokens(10); // Example value, set according to your contract
+        await crowdsale
+          .connect(user1)
+          .buyTokens(minContributionAmount, {
+            value: minContributionAmount.mul(pricePerToken).div(tokens(1)),
+          });
 
         // Now, user1 can make a smaller purchase
-        const smallPurchase = tokens(5);  // Example value, set according to your contract
+        const smallPurchase = tokens(5); // Example value, set according to your contract
         await expect(
-          crowdsale.connect(user1).buyTokens(smallPurchase, { value: smallPurchase.mul(pricePerToken).div(tokens(1)) })
+          crowdsale
+            .connect(user1)
+            .buyTokens(smallPurchase, {
+              value: smallPurchase.mul(pricePerToken).div(tokens(1)),
+            })
         ).to.not.be.reverted;
 
-        expect(await token.balanceOf(user1.address)).to.equal(amount.add(minContributionAmount).add(smallPurchase));
+        expect(await token.balanceOf(user1.address)).to.equal(
+          amount.add(minContributionAmount).add(smallPurchase)
+        );
       });
     });
   });
@@ -188,7 +223,8 @@ describe("Crowdsale", () => {
 
     describe("Failure", () => {
       it("prevents non-owner from updating", async () => {
-        await expect(crowdsale.connect(user1).setPrice(newPrice)).to.be.reverted;
+        await expect(crowdsale.connect(user1).setPrice(newPrice)).to.be
+          .reverted;
       });
     });
   });
@@ -216,7 +252,9 @@ describe("Crowdsale", () => {
 
       it("transfers remaining tokens to the owner", async () => {
         expect(await token.balanceOf(crowdsale.address)).to.equal(0);
-        expect(await token.balanceOf(deployer.address)).to.equal(tokens(999990));
+        expect(await token.balanceOf(deployer.address)).to.equal(
+          tokens(999990)
+        );
       });
 
       it("transfers contract balance to the owner", async () => {
